@@ -9,34 +9,38 @@ import (
 // Loop through each string in the slice, run a goroutine for each loop using a channel.
 // Output the status code for each URL
 
-var URLsToCheck []string = []string{"https://adamherro.dev/", "https://vaudify.com/", "https://adamherro.dev/contact", "https://adamhro.dev/"}
+var URLsToCheck []string = []string{"https://adamherro.dev", "https://vaudify.com", "https://adamherro.dev/contact", "https://adamhro.dev", "https://google.com", "https://hockey-ecommerce-store.onrender.com"}
 
-type Result struct {
-	resultList map[string]int
-}
-
-func (r *Result) makeResultMap() map[string]int {
-	r.resultList = make(map[string]int)
-	return r.resultList
+type receivedURL struct {
+	url    string
+	status int
+	error  error
 }
 
 type URLList []string
 
-func URLChecker(list URLList) *Result {
-	result := &Result{}
-	result.makeResultMap()
+func URLChecker(list URLList) map[string]int {
+	result := make(map[string]int)
+
+	resultChan := make(chan receivedURL)
 
 	for _, url := range list {
-		status, err := checkURL(url)
-		if err != nil {
-			fmt.Println("✗ -", url, "-", "Server Does Not Exist")
-			result.resultList[url] = 0
-		} else if status != 200 {
-			fmt.Println("✗ -", url, "-", status)
-			result.resultList[url] = status
+		go func() {
+			status, err := checkURL(url)
+			resultChan <- receivedURL{url, status, err}
+		}()
+	}
+	for i := 0; i < len(list); i++ {
+		received := <-resultChan
+		if received.error != nil {
+			fmt.Println("✗ -", received.url, "-", "Server Does Not Exist")
+			result[received.url] = 0
+		} else if received.status != 200 {
+			fmt.Println("✗ -", received.url, "-", received.status)
+			result[received.url] = received.status
 		} else {
-			fmt.Println("✓ -", url, "-", status)
-			result.resultList[url] = status
+			fmt.Println("✓ -", received.url, "-", received.status)
+			result[received.url] = received.status
 		}
 	}
 
