@@ -9,32 +9,46 @@ import (
 // Loop through each string in the slice, run a goroutine for each loop using a channel.
 // Output the status code for each URL
 
-var URLsToCheck []string = []string{"https://adamherro.dev/", "https://vaudify.com/"}
+var URLsToCheck []string = []string{"https://adamherro.dev/", "https://vaudify.com/", "https://adamherro.dev/contact", "https://adamhro.dev/"}
 
-func URLChecker(urlList []string) map[string]bool {
-	urlResult := make(map[string]bool)
+type Result struct {
+	resultList map[string]int
+}
 
-	for _, url := range urlList {
-		status := checkURL(url)
-		if status != 200 {
+func (r *Result) makeResultMap() map[string]int {
+	r.resultList = make(map[string]int)
+	return r.resultList
+}
+
+type URLList []string
+
+func URLChecker(list URLList) *Result {
+	result := &Result{}
+	result.makeResultMap()
+
+	for _, url := range list {
+		status, err := checkURL(url)
+		if err != nil {
+			fmt.Println("✗ -", url, "-", "Server Does Not Exist")
+			result.resultList[url] = 0
+		} else if status != 200 {
 			fmt.Println("✗ -", url, "-", status)
-			urlResult[url] = false
+			result.resultList[url] = status
 		} else {
-			fmt.Println("✓ -", url, "-", status, "(Ok)")
-			urlResult[url] = true
+			fmt.Println("✓ -", url, "-", status)
+			result.resultList[url] = status
 		}
 	}
 
-	return urlResult
+	return result
 }
 
-func checkURL(url string) int {
-	res, err := http.Get(url)
+func checkURL(a string) (int, error) {
+	res, err := http.Get(a)
 	if err != nil {
-		fmt.Println("Error:", err)
-		return 0
+		return 0, err
 	}
-	return res.StatusCode
+	return res.StatusCode, nil
 }
 
 func main() {
